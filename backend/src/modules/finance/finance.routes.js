@@ -1,0 +1,10 @@
+const express = require("express"); const controller = require("./finance.controller"); const validate = require("../../middleware/validate");
+const { authenticate } = require("../../middleware/auth"); const { requirePermission } = require("../../common/rbac");
+const { collectPaymentSchema, requestRefundSchema, approveRefundSchema } = require("./finance.validation");
+const router = express.Router(); router.use(authenticate);
+router.post("/payments", requirePermission("finance:collect"), validate(collectPaymentSchema), controller.collectPayment);
+router.get("/payments", requirePermission("finance:read"), controller.listPayments);
+router.get("/invoices/:invoiceNumber", requirePermission("finance:read"), controller.getInvoice);
+router.post("/refunds", requirePermission("finance:collect"), validate(requestRefundSchema), controller.requestRefund);
+router.patch("/refunds/:refundId/decision", requirePermission("finance:refund:approve"), validate(approveRefundSchema), controller.decideRefund);
+module.exports = router;

@@ -1,0 +1,10 @@
+const express = require("express"); const controller = require("./experience.controller"); const validate = require("../../middleware/validate"); const { authenticate, requireRole } = require("../../middleware/auth"); const { requirePermission } = require("../../common/rbac"); const { feedbackSchema, complaintSchema, complaintUpdateSchema } = require("./experience.validation");
+const router = express.Router(); router.use(authenticate);
+router.post("/feedback", requirePermission("experience:write"), validate(feedbackSchema), controller.createFeedback);
+router.get("/feedback", requirePermission("experience:read"), controller.listFeedback);
+router.get("/feedback/analysis", requirePermission("experience:read"), controller.feedbackAnalysis);
+router.post("/complaints", requirePermission("experience:write"), validate(complaintSchema), controller.createComplaint);
+router.get("/complaints/mine", requireRole("GUEST"), controller.listGuestComplaints);
+router.get("/complaints", requirePermission("experience:read"), controller.listComplaints);
+router.patch("/complaints/:complaintId", requirePermission("experience:manage"), validate(complaintUpdateSchema), controller.updateComplaint);
+module.exports = router;

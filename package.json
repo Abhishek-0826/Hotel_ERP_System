@@ -1,0 +1,15 @@
+{
+  "name": "roost",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prisma:generate": "npm --prefix backend exec prisma generate",
+    "install:all": "npm --prefix backend ci && npm --prefix frontend ci",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint && npm --prefix backend run lint",
+    "test": "npm --prefix backend test",
+    "test:e2e": "npm --prefix frontend run test:e2e"
+  }
+}

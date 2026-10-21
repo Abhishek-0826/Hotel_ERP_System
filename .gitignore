@@ -1,0 +1,24 @@
+# Dependencies and build output
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+
+# Environment and credentials (examples remain tracked)
+**/.env
+**/.env.*
+!**/.env.example
+*.key
+*.p12
+*.pfx
+
+# Test and tool output
+**/playwright-report/
+**/test-results/
+**/.temp/
+*.log
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/

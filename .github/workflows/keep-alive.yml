@@ -1,0 +1,42 @@
+name: Keep alive
+
+# Supabase free-tier projects pause after 7 days without DATABASE activity and
+# can eventually be deleted. This runs a real query against Postgres through
+# the REST API every 3 days (Row Level Security returns an empty list, but the
+# query still reaches the database, which resets the pause clock).
+# It also pings the Render API so the free instance wakes up.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL              https://<project-ref>.supabase.co
+#   SUPABASE_PUBLISHABLE_KEY  the publishable key (same as VITE_SUPABASE_PUBLISHABLE_KEY)
+#   API_BASE_URL              optional, e.g. https://roost-api.onrender.com
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+    steps:
+      - name: Query the Supabase database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 \
+            "$SUPABASE_URL/rest/v1/tenants?select=id&limit=1" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY"
+
+      - name: Wake the API (optional)
+        if: env.API_BASE_URL != ''
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 15 --max-time 90 \
+            "$API_BASE_URL/api/v1/health"

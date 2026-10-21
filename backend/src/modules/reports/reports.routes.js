@@ -1,0 +1,4 @@
+const express = require("express"); const controller = require("./reports.controller"); const { authenticate } = require("../../middleware/auth"); const { requirePermission } = require("../../common/rbac");
+const router = express.Router(); router.use(authenticate, requirePermission("reports:read"));
+router.get("/dashboard", controller.dashboard); router.get("/occupancy", controller.occupancy); router.get("/revenue", controller.revenue); router.get("/guests", controller.guests); router.get("/bookings", controller.bookings); router.get("/payments", controller.payments); router.get("/inventory", controller.inventory); router.get("/staff-performance", controller.staff); router.get("/staff", controller.staff); router.get("/complaints", controller.complaints); router.get("/feedback", controller.feedback); router.get("/bi/weekly", controller.weeklyBi); router.get("/bi/monthly", controller.monthlyBi);
+module.exports = router;

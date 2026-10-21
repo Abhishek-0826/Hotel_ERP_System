@@ -1,0 +1,529 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model amenities {
+  id                 BigInt               @id @default(autoincrement())
+  tenant_id          BigInt
+  name               String               @db.VarChar(100)
+  description        String?
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  updated_at         DateTime             @default(now()) @db.Timestamp(6)
+  tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_amenities_tenant")
+  property_amenities property_amenities[]
+  room_amenities     room_amenities[]
+
+  @@unique([tenant_id, id], map: "uq_amenities_tenant_id")
+  @@unique([tenant_id, name], map: "uq_amenities_tenant_name")
+  @@index([tenant_id], map: "idx_amenities_tenant_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model beds {
+  id                                               BigInt     @id @default(autoincrement())
+  tenant_id                                        BigInt
+  room_id                                          BigInt
+  bed_code                                         String     @db.VarChar(50)
+  position                                         String?    @db.VarChar(50)
+  price_override                                   Decimal?   @db.Decimal(12, 2)
+  status                                           String     @default("AVAILABLE") @db.VarChar(30)
+  created_at                                       DateTime   @default(now()) @db.Timestamp(6)
+  updated_at                                       DateTime   @default(now()) @db.Timestamp(6)
+  rooms_beds_room_idTorooms                        rooms      @relation("beds_room_idTorooms", fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_beds_room")
+  tenants                                          tenants    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_beds_tenant")
+  rooms_beds_tenant_id_room_idTorooms              rooms      @relation("beds_tenant_id_room_idTorooms", fields: [tenant_id, room_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_beds_tenant_room")
+  bookings_bookings_bed_idTobeds                   bookings[] @relation("bookings_bed_idTobeds")
+  bookings_bookings_tenant_id_room_id_bed_idTobeds bookings[] @relation("bookings_tenant_id_room_id_bed_idTobeds")
+
+  @@unique([room_id, bed_code], map: "uq_beds_room_code")
+  @@unique([tenant_id, room_id, id], map: "uq_beds_tenant_room_id")
+  @@index([room_id], map: "idx_beds_room_id")
+  @@index([status], map: "idx_beds_status")
+  @@index([tenant_id], map: "idx_beds_tenant_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bookings {
+  id                                                    BigInt       @id @default(autoincrement())
+  booking_code                                          String       @unique @db.VarChar(50)
+  tenant_id                                             BigInt
+  guest_id                                              BigInt
+  property_id                                           BigInt
+  room_id                                               BigInt
+  bed_id                                                BigInt
+  check_in                                              DateTime     @db.Date
+  check_out                                             DateTime     @db.Date
+  guest_name                                            String       @db.VarChar(255)
+  guest_phone                                           String?      @db.VarChar(30)
+  guest_email                                           String?      @db.VarChar(255)
+  source                                                String       @default("WEB") @db.VarChar(30)
+  status                                                String       @default("PENDING") @db.VarChar(30)
+  rejection_reason                                      String?
+  total_amount                                          Decimal      @db.Decimal(12, 2)
+  actual_check_in                                       DateTime?    @db.Timestamp(6)
+  actual_check_out                                      DateTime?    @db.Timestamp(6)
+  checked_in_by                                         BigInt?
+  checked_out_by                                        BigInt?
+  payment_status                                        String       @default("UNPAID") @db.VarChar(30)
+  created_at                                            DateTime     @default(now()) @db.Timestamp(6)
+  updated_at                                            DateTime     @default(now()) @db.Timestamp(6)
+  beds_bookings_bed_idTobeds                            beds         @relation("bookings_bed_idTobeds", fields: [bed_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_bed")
+  users                                                 users        @relation("bookings_guest", fields: [guest_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_guest")
+  checked_in_user                                       users?       @relation("bookings_checked_in_by", fields: [checked_in_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  checked_out_user                                      users?       @relation("bookings_checked_out_by", fields: [checked_out_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  properties_bookings_property_idToproperties           properties   @relation("bookings_property_idToproperties", fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_property")
+  rooms_bookings_room_idTorooms                         rooms        @relation("bookings_room_idTorooms", fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_room")
+  tenants                                               tenants      @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_tenant")
+  properties_bookings_tenant_id_property_idToproperties properties   @relation("bookings_tenant_id_property_idToproperties", fields: [tenant_id, property_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_tenant_property")
+  rooms_bookings_tenant_id_property_id_room_idTorooms   rooms        @relation("bookings_tenant_id_property_id_room_idTorooms", fields: [tenant_id, property_id, room_id], references: [tenant_id, property_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_tenant_property_room")
+  beds_bookings_tenant_id_room_id_bed_idTobeds          beds         @relation("bookings_tenant_id_room_id_bed_idTobeds", fields: [tenant_id, room_id, bed_id], references: [tenant_id, room_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_tenant_room_bed")
+  payments                                              payments[]
+  invoices                                              invoices[]
+  refunds                                               refunds[]
+  feedback                                              feedback[]
+  complaints                                            complaints[]
+
+  @@index([bed_id, check_in, check_out], map: "idx_bookings_bed_dates")
+  @@index([bed_id], map: "idx_bookings_bed_id")
+  @@index([guest_id], map: "idx_bookings_guest_id")
+  @@index([property_id], map: "idx_bookings_property_id")
+  @@index([room_id], map: "idx_bookings_room_id")
+  @@index([status], map: "idx_bookings_status")
+  @@index([tenant_id], map: "idx_bookings_tenant_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model properties {
+  id                                                  BigInt               @id @default(autoincrement())
+  tenant_id                                           BigInt
+  name                                                String               @db.VarChar(255)
+  slug                                                String               @db.VarChar(150)
+  description                                         String?
+  address                                             String?
+  city                                                String?              @db.VarChar(100)
+  state                                               String?              @db.VarChar(100)
+  postal_code                                         String?              @db.VarChar(20)
+  latitude                                            Decimal?             @db.Decimal(10, 7)
+  longitude                                           Decimal?             @db.Decimal(10, 7)
+  area                                                String?              @db.VarChar(100)
+  property_type                                       String               @default("PG") @db.VarChar(30)
+  gender_policy                                       String               @default("MIXED") @db.VarChar(30)
+  price                                               Decimal?             @db.Decimal(12, 2)
+  starting_price                                      Decimal?             @db.Decimal(12, 2)
+  rating                                              Decimal              @default(0) @db.Decimal(3, 2)
+  reviews                                             Int                  @default(0)
+  featured                                            Boolean              @default(false)
+  status                                              String               @default("DRAFT") @db.VarChar(30)
+  created_at                                          DateTime             @default(now()) @db.Timestamp(6)
+  updated_at                                          DateTime             @default(now()) @db.Timestamp(6)
+  bookings_bookings_property_idToproperties           bookings[]           @relation("bookings_property_idToproperties")
+  bookings_bookings_tenant_id_property_idToproperties bookings[]           @relation("bookings_tenant_id_property_idToproperties")
+  tenants                                             tenants              @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_properties_tenant")
+  property_amenities                                  property_amenities[]
+  rooms_rooms_property_idToproperties                 rooms[]              @relation("rooms_property_idToproperties")
+  rooms_rooms_tenant_id_property_idToproperties       rooms[]              @relation("rooms_tenant_id_property_idToproperties")
+  inventory_items                                     inventory_items[]
+
+  @@unique([tenant_id, id], map: "uq_properties_tenant_id")
+  @@unique([tenant_id, slug], map: "uq_properties_tenant_slug")
+  @@index([city], map: "idx_properties_city")
+  @@index([tenant_id], map: "idx_properties_tenant_id")
+}
+
+model property_amenities {
+  tenant_id   BigInt
+  property_id BigInt
+  amenity_id  BigInt
+  created_at  DateTime   @default(now()) @db.Timestamp(6)
+  amenities   amenities  @relation(fields: [tenant_id, amenity_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_property_amenities_amenity")
+  properties  properties @relation(fields: [tenant_id, property_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_property_amenities_property")
+
+  @@id([property_id, amenity_id], map: "pk_property_amenities")
+  @@index([amenity_id], map: "idx_property_amenities_amenity_id")
+  @@index([tenant_id], map: "idx_property_amenities_tenant_id")
+}
+
+model room_amenities {
+  tenant_id  BigInt
+  room_id    BigInt
+  amenity_id BigInt
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  amenities  amenities @relation(fields: [tenant_id, amenity_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_room_amenities_amenity")
+  rooms      rooms     @relation(fields: [tenant_id, room_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_room_amenities_room")
+
+  @@id([room_id, amenity_id], map: "pk_room_amenities")
+  @@index([amenity_id], map: "idx_room_amenities_amenity_id")
+  @@index([tenant_id], map: "idx_room_amenities_tenant_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model rooms {
+  id                                                     BigInt           @id @default(autoincrement())
+  tenant_id                                              BigInt
+  property_id                                            BigInt
+  room_number                                            String           @db.VarChar(50)
+  floor                                                  Int?
+  gender_policy                                          String           @default("MIXED") @db.VarChar(30)
+  has_ac                                                 Boolean          @default(false)
+  has_attached_bathroom                                  Boolean          @default(false)
+  base_price                                             Decimal          @db.Decimal(12, 2)
+  status                                                 String           @default("ACTIVE") @db.VarChar(30)
+  created_at                                             DateTime         @default(now()) @db.Timestamp(6)
+  updated_at                                             DateTime         @default(now()) @db.Timestamp(6)
+  beds_beds_room_idTorooms                               beds[]           @relation("beds_room_idTorooms")
+  beds_beds_tenant_id_room_idTorooms                     beds[]           @relation("beds_tenant_id_room_idTorooms")
+  bookings_bookings_room_idTorooms                       bookings[]       @relation("bookings_room_idTorooms")
+  bookings_bookings_tenant_id_property_id_room_idTorooms bookings[]       @relation("bookings_tenant_id_property_id_room_idTorooms")
+  room_amenities                                         room_amenities[]
+  properties_rooms_property_idToproperties               properties       @relation("rooms_property_idToproperties", fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rooms_property")
+  tenants                                                tenants          @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rooms_tenant")
+  properties_rooms_tenant_id_property_idToproperties     properties       @relation("rooms_tenant_id_property_idToproperties", fields: [tenant_id, property_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rooms_tenant_property")
+
+  @@unique([property_id, room_number], map: "uq_rooms_property_number")
+  @@unique([tenant_id, id], map: "uq_rooms_tenant_id")
+  @@unique([tenant_id, property_id, id], map: "uq_rooms_tenant_property_id")
+  @@index([property_id], map: "idx_rooms_property_id")
+  @@index([tenant_id], map: "idx_rooms_tenant_id")
+}
+
+model tenants {
+  id                     BigInt                   @id @default(autoincrement())
+  legal_name             String                   @db.VarChar(255)
+  display_name           String                   @db.VarChar(255)
+  slug                   String                   @unique @db.VarChar(100)
+  whatsapp_number        String?                  @db.VarChar(20)
+  timezone               String                   @default("Asia/Kolkata") @db.VarChar(50)
+  currency               String                   @default("INR") @db.VarChar(10)
+  status                 String                   @default("ACTIVE") @db.VarChar(20)
+  logo_url               String?
+  brand_color            String?                  @db.VarChar(20)
+  tagline                String?                  @db.VarChar(255)
+  description            String?
+  contact_email          String?                  @db.VarChar(255)
+  contact_phone          String?                  @db.VarChar(20)
+  address                String?
+  city                   String?                  @db.VarChar(100)
+  state                  String?                  @db.VarChar(100)
+  postal_code            String?                  @db.VarChar(20)
+  website                String?                  @db.VarChar(255)
+  onboarding_completed   Boolean                  @default(false)
+  created_at             DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamp(6)
+  amenities              amenities[]
+  beds                   beds[]
+  bookings               bookings[]
+  properties             properties[]
+  rooms                  rooms[]
+  users                  users[]
+  guest_profiles         guest_profiles[]
+  payments               payments[]
+  invoices               invoices[]
+  refunds                refunds[]
+  feedback               feedback[]
+  complaints             complaints[]
+  audit_logs             audit_logs[]
+  inventory_items        inventory_items[]
+  inventory_transactions inventory_transactions[]
+  system_settings        system_settings[]
+  notifications          notifications[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                     BigInt                   @id @default(autoincrement())
+  tenant_id              BigInt?
+  name                   String                   @db.VarChar(255)
+  email                  String                   @unique @db.VarChar(255)
+  phone                  String?                  @db.VarChar(20)
+  password_hash          String?                  @db.VarChar(255)
+  auth_user_id           String?                  @unique @db.Uuid
+  must_change_password   Boolean                  @default(false)
+  role                   String                   @db.VarChar(30)
+  status                 String                   @default("ACTIVE") @db.VarChar(30)
+  department             String?                  @db.VarChar(100)
+  joining_date           DateTime?                @db.Date
+  created_at             DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamp(6)
+  bookings_as_guest      bookings[]               @relation("bookings_guest")
+  bookings_checked_in    bookings[]               @relation("bookings_checked_in_by")
+  bookings_checked_out   bookings[]               @relation("bookings_checked_out_by")
+  tenants                tenants?                 @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_tenant")
+  guest_profiles         guest_profiles[]
+  payments_received      payments[]
+  feedback               feedback[]
+  complaints_filed       complaints[]             @relation("complaints_guest")
+  complaints_assigned    complaints[]             @relation("complaints_assigned")
+  refunds_approved       refunds[]
+  audit_logs             audit_logs[]
+  inventory_transactions inventory_transactions[]
+  password_reset_tokens  password_reset_tokens[]
+  notifications          notifications[]
+
+  @@index([role], map: "idx_users_role")
+  @@index([tenant_id], map: "idx_users_tenant_id")
+}
+
+model notifications {
+  id         BigInt   @id @default(autoincrement())
+  tenant_id  BigInt?
+  user_id    BigInt?
+  title      String   @db.VarChar(255)
+  body       String
+  type       String   @db.VarChar(50)
+  unread     Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  tenants    tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users      users?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at], map: "idx_notifications_user_created")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// NEW MODELS
+// ─────────────────────────────────────────────────────────────────────────
+
+model guest_profiles {
+  id                      BigInt    @id @default(autoincrement())
+  tenant_id               BigInt
+  user_id                 BigInt
+  id_proof_type           String?   @db.VarChar(50)
+  id_proof_number         String?   @db.VarChar(100)
+  id_proof_photo          String?   @db.VarChar(500)
+  address                 String?
+  city                    String?   @db.VarChar(100)
+  state                   String?   @db.VarChar(100)
+  nationality             String?   @default("Indian") @db.VarChar(50)
+  gender                  String?   @db.VarChar(10)
+  date_of_birth           DateTime? @db.Date
+  emergency_contact_name  String?   @db.VarChar(255)
+  emergency_contact_phone String?   @db.VarChar(20)
+  notes                   String?
+  created_at              DateTime  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime  @default(now()) @db.Timestamp(6)
+  tenants                 tenants   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                   users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, user_id], map: "uq_guest_profiles_tenant_user")
+  @@index([tenant_id], map: "idx_guest_profiles_tenant")
+  @@index([user_id], map: "idx_guest_profiles_user")
+}
+
+model payments {
+  id              BigInt     @id @default(autoincrement())
+  tenant_id       BigInt
+  booking_id      BigInt
+  payment_code    String     @unique @db.VarChar(50)
+  amount          Decimal    @db.Decimal(12, 2)
+  method          String     @default("CASH") @db.VarChar(30)
+  status          String     @default("PENDING") @db.VarChar(30)
+  received_by     BigInt?
+  transaction_ref String?    @db.VarChar(255)
+  notes           String?
+  paid_at         DateTime?  @db.Timestamp(6)
+  created_at      DateTime   @default(now()) @db.Timestamp(6)
+  updated_at      DateTime   @default(now()) @db.Timestamp(6)
+  tenants         tenants    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings        bookings   @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  received_user   users?     @relation(fields: [received_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  invoices        invoices[]
+  refunds         refunds[]
+
+  @@index([tenant_id], map: "idx_payments_tenant")
+  @@index([booking_id], map: "idx_payments_booking")
+  @@index([status], map: "idx_payments_status")
+}
+
+model invoices {
+  id             BigInt    @id @default(autoincrement())
+  tenant_id      BigInt
+  booking_id     BigInt
+  payment_id     BigInt?
+  invoice_number String    @unique @db.VarChar(50)
+  subtotal       Decimal   @db.Decimal(12, 2)
+  tax_amount     Decimal   @default(0) @db.Decimal(12, 2)
+  total_amount   Decimal   @db.Decimal(12, 2)
+  status         String    @default("DRAFT") @db.VarChar(30)
+  issued_at      DateTime? @db.Timestamp(6)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @db.Timestamp(6)
+  tenants        tenants   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings       bookings  @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payments       payments? @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_invoices_tenant")
+  @@index([booking_id], map: "idx_invoices_booking")
+}
+
+model refunds {
+  id            BigInt    @id @default(autoincrement())
+  tenant_id     BigInt
+  payment_id    BigInt
+  booking_id    BigInt
+  refund_code   String    @unique @db.VarChar(50)
+  amount        Decimal   @db.Decimal(12, 2)
+  reason        String
+  status        String    @default("PENDING") @db.VarChar(30)
+  approved_by   BigInt?
+  processed_at  DateTime? @db.Timestamp(6)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @default(now()) @db.Timestamp(6)
+  tenants       tenants   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payments      payments  @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings      bookings  @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approved_user users?    @relation(fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_refunds_tenant")
+  @@index([payment_id], map: "idx_refunds_payment")
+}
+
+model feedback {
+  id                 BigInt    @id @default(autoincrement())
+  tenant_id          BigInt
+  booking_id         BigInt?
+  guest_id           BigInt
+  overall_rating     Int
+  cleanliness_rating Int?
+  service_rating     Int?
+  value_rating       Int?
+  comment            String?
+  status             String    @default("NEW") @db.VarChar(30)
+  reviewed_by        BigInt?
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime  @default(now()) @db.Timestamp(6)
+  tenants            tenants   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings           bookings? @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guests             users     @relation(fields: [guest_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_feedback_tenant")
+  @@index([booking_id], map: "idx_feedback_booking")
+  @@index([guest_id], map: "idx_feedback_guest")
+}
+
+model complaints {
+  id             BigInt    @id @default(autoincrement())
+  tenant_id      BigInt
+  booking_id     BigInt?
+  guest_id       BigInt
+  complaint_code String    @unique @db.VarChar(50)
+  category       String?   @db.VarChar(50)
+  subject        String    @db.VarChar(255)
+  description    String
+  priority       String    @default("MEDIUM") @db.VarChar(20)
+  status         String    @default("OPEN") @db.VarChar(30)
+  assigned_to    BigInt?
+  resolution     String?
+  resolved_at    DateTime? @db.Timestamp(6)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @db.Timestamp(6)
+  tenants        tenants   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings       bookings? @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guest          users     @relation("complaints_guest", fields: [guest_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assigned_user  users?    @relation("complaints_assigned", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_complaints_tenant")
+  @@index([status], map: "idx_complaints_status")
+  @@index([priority], map: "idx_complaints_priority")
+}
+
+model audit_logs {
+  id          BigInt   @id @default(autoincrement())
+  tenant_id   BigInt?
+  user_id     BigInt?
+  action      String   @db.VarChar(100)
+  entity_type String   @db.VarChar(50)
+  entity_id   String?  @db.VarChar(50)
+  old_values  Json?
+  new_values  Json?
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  tenants     tenants? @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_audit_logs_tenant")
+  @@index([user_id], map: "idx_audit_logs_user")
+  @@index([entity_type, entity_id], map: "idx_audit_logs_entity")
+  @@index([created_at], map: "idx_audit_logs_created")
+}
+
+model inventory_items {
+  id              BigInt                   @id @default(autoincrement())
+  tenant_id       BigInt
+  property_id     BigInt
+  name            String                   @db.VarChar(255)
+  category        String                   @default("NON_RECURRING") @db.VarChar(30)
+  unit            String?                  @default("PIECE") @db.VarChar(30)
+  current_stock   Decimal                  @default(0) @db.Decimal(12, 2)
+  min_stock_level Decimal                  @default(0) @db.Decimal(12, 2)
+  cost_per_unit   Decimal?                 @db.Decimal(12, 2)
+  status          String                   @default("ACTIVE") @db.VarChar(30)
+  created_at      DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at      DateTime                 @default(now()) @db.Timestamp(6)
+  tenants         tenants                  @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  properties      properties               @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transactions    inventory_transactions[]
+
+  @@unique([tenant_id, property_id, name], map: "uq_inventory_items_tenant_property_name")
+  @@index([tenant_id], map: "idx_inventory_items_tenant")
+  @@index([property_id], map: "idx_inventory_items_property")
+}
+
+model inventory_transactions {
+  id           BigInt          @id @default(autoincrement())
+  tenant_id    BigInt
+  item_id      BigInt
+  type         String          @db.VarChar(20)
+  quantity     Decimal         @db.Decimal(12, 2)
+  notes        String?
+  performed_by BigInt
+  created_at   DateTime        @default(now()) @db.Timestamp(6)
+  tenants      tenants         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  item         inventory_items @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  performer    users           @relation(fields: [performed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_inventory_tx_tenant")
+  @@index([item_id], map: "idx_inventory_tx_item")
+}
+
+model cameras {
+  id         BigInt   @id @default(autoincrement())
+  name       String   @unique @db.VarChar(255)
+  location   String   @db.VarChar(255)
+  status     String   @default("ONLINE") @db.VarChar(30)
+  stream_url String?  @db.VarChar(2048)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([status], map: "idx_cameras_status")
+}
+
+model system_settings {
+  id            BigInt   @id @default(autoincrement())
+  tenant_id     BigInt?
+  setting_key   String   @db.VarChar(100)
+  setting_value String?
+  category      String?  @default("GENERAL") @db.VarChar(50)
+  description   String?
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @default(now()) @db.Timestamp(6)
+  tenants       tenants? @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_system_settings_tenant")
+  @@index([category], map: "idx_system_settings_category")
+}
+
+model password_reset_tokens {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt
+  token      String   @unique @db.VarChar(255)
+  expires_at DateTime @db.Timestamp(6)
+  used       Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
